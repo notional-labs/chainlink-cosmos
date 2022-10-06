@@ -20,5 +20,4 @@ func RegisterRoutes(clientCtx client.Context, rtr *mux.Router) {
 	r := clientrest.WithHTTPDeprecationHeaders(rtr)
 
 	registerQueryRoutes(clientCtx, r)
-	registerTxHandlers(clientCtx, r)
 }

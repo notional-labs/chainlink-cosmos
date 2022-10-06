@@ -92,7 +92,7 @@ func TestFeedKeyStructure(t *testing.T) {
 
 			for ; iterator.Valid(); iterator.Next() {
 				var feedData types.OCRFeedDataInStore
-				k.cdc.MustUnmarshalBinaryBare(iterator.Value(), &feedData)
+				k.cdc.Unmarshal(iterator.Value(), &feedData)
 				//fmt.Println("[DEBUG] found key", string(iterator.Key()), feedData.FeedData.FeedId, feedData.RoundId)
 
 				require.Equal(t, tc.feedId, feedData.GetFeedData().GetFeedId())
@@ -137,7 +137,7 @@ func TestKeeper_SetFeedData(t *testing.T) {
 
 			var feedData types.OCRFeedDataInStore
 			value := feedDateStore.Get(types.GetFeedDataKey(tc.feedId, strconv.FormatUint(tc.roundId, 10)))
-			err = k.cdc.UnmarshalBinaryBare(value, &feedData)
+			err = k.cdc.Unmarshal(value, &feedData)
 			require.NoError(t, err)
 			require.Equal(t, tc.feedId, feedData.GetFeedData().GetFeedId())
 		})
@@ -314,7 +314,7 @@ func TestKeeper_SetModuleOwner(t *testing.T) {
 	// try to retrieve module owner
 	data := moduleStore.Get(types.GetModuleOwnerKey(acc.String()))
 	var moduleOwner types.MsgModuleOwner
-	err = k.cdc.UnmarshalBinaryBare(data, &moduleOwner)
+	err = k.cdc.Unmarshal(data, &moduleOwner)
 	require.NoError(t, err)
 
 	require.EqualValues(t, acc, moduleOwner.GetAddress())

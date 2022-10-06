@@ -4,23 +4,14 @@
 package rest
 
 import (
+	"net/http"
+
 	"github.com/ChainSafe/chainlink-cosmos/x/chainlink/types"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/rest"
-	authrest "github.com/cosmos/cosmos-sdk/x/auth/client/rest"
-	"github.com/gorilla/mux"
-	"net/http"
 )
-
-func registerTxHandlers(clientCtx client.Context, r *mux.Router) {
-	r.HandleFunc("/txs/encode", authrest.EncodeTxRequestHandlerFn(clientCtx)).Methods(MethodPOST)
-	r.HandleFunc("/txs/decode", authrest.DecodeTxRequestHandlerFn(clientCtx)).Methods(MethodPOST)
-	r.HandleFunc("/txs", authrest.BroadcastTxRequest(clientCtx)).Methods(MethodPOST)
-
-	r.HandleFunc("/chainlink/feed/data", NewFeedDataRequestHandler(clientCtx)).Methods(MethodPUT)
-}
 
 type FeedDataRequest struct {
 	BaseReq       rest.BaseReq `json:"baseReq"`

@@ -20,7 +20,7 @@ import (
 
 type (
 	Keeper struct {
-		cdc                 codec.Marshaler
+		cdc                 codec.Codec
 		bankKeeper          types.BankKeeper
 		feedDataStoreKey    sdk.StoreKey
 		roundStoreKey       sdk.StoreKey
@@ -32,7 +32,7 @@ type (
 )
 
 func NewKeeper(
-	cdc codec.Marshaler,
+	cdc codec.Codec,
 	bk types.BankKeeper,
 	feedDataStoreKey,
 	roundStoreKey,
@@ -107,7 +107,7 @@ func (k Keeper) SetFeedData(ctx sdk.Context, feedData *types.MsgFeedData) (int64
 
 	feedDataStore := ctx.KVStore(k.feedDataStoreKey)
 
-	f := k.cdc.MustMarshalBinaryBare(&finalFeedDataInStore)
+	f := k.cdc.MustMarshal(&finalFeedDataInStore)
 
 	feedDataStore.Set(types.GetFeedDataKey(feedData.GetFeedId(), strconv.FormatUint(roundId, 10)), f)
 
@@ -136,7 +136,7 @@ func (k Keeper) GetRoundFeedDataByFilter(ctx sdk.Context, req *types.GetRoundDat
 	pageRes, err := query.Paginate(feedDataStore, req.Pagination, func(key []byte, value []byte) error {
 		var feedData types.OCRFeedDataInStore
 
-		if err := k.cdc.UnmarshalBinaryBare(value, &feedData); err != nil {
+		if err := k.cdc.Unmarshal(value, &feedData); err != nil {
 			return err
 		}
 
@@ -175,7 +175,7 @@ func (k Keeper) GetLatestRoundFeedDataByFilter(ctx sdk.Context, req *types.GetLa
 
 	for ; iterator.Valid(); iterator.Next() {
 		var feedData types.OCRFeedDataInStore
-		k.cdc.MustUnmarshalBinaryBare(iterator.Value(), &feedData)
+		k.cdc.Unmarshal(iterator.Value(), &feedData)
 
 		data := feedDataFilter(req.GetFeedId(), latestRoundId, feedData)
 		if data != nil {
@@ -219,7 +219,7 @@ func (k Keeper) GetLatestRoundId(ctx sdk.Context, feedId string) uint64 {
 func (k Keeper) SetModuleOwner(ctx sdk.Context, moduleOwner *types.MsgModuleOwner) (int64, []byte) {
 	moduleStore := ctx.KVStore(k.moduleOwnerStoreKey)
 
-	f := k.cdc.MustMarshalBinaryBare(moduleOwner)
+	f := k.cdc.MustMarshal(moduleOwner)
 
 	moduleStore.Set(types.GetModuleOwnerKey(moduleOwner.GetAddress().String()), f)
 
@@ -244,7 +244,7 @@ func (k Keeper) GetModuleOwnerList(ctx sdk.Context) *types.GetModuleOwnerRespons
 
 	for ; iterator.Valid(); iterator.Next() {
 		var moduleOwner types.MsgModuleOwner
-		k.cdc.MustUnmarshalBinaryBare(iterator.Value(), &moduleOwner)
+		k.cdc.Unmarshal(iterator.Value(), &moduleOwner)
 
 		moduleOwners = append(moduleOwners, &moduleOwner)
 	}
@@ -257,7 +257,7 @@ func (k Keeper) GetModuleOwnerList(ctx sdk.Context) *types.GetModuleOwnerRespons
 func (k Keeper) SetFeed(ctx sdk.Context, feed *types.MsgFeed) (int64, []byte) {
 	feedInfoStore := ctx.KVStore(k.feedInfoStoreKey)
 
-	f := k.cdc.MustMarshalBinaryBare(feed)
+	f := k.cdc.MustMarshal(feed)
 
 	feedInfoStore.Set(types.GetFeedInfoKey(feed.GetFeedId()), f)
 
@@ -275,7 +275,7 @@ func (k Keeper) GetFeed(ctx sdk.Context, feedId string) *types.GetFeedByIdRespon
 	}
 
 	var feed types.MsgFeed
-	k.cdc.MustUnmarshalBinaryBare(feedIdBytes, &feed)
+	k.cdc.Unmarshal(feedIdBytes, &feed)
 
 	return &types.GetFeedByIdResponse{
 		Feed: &feed,
@@ -464,7 +464,7 @@ func (k Keeper) RequestNewRound(ctx sdk.Context, requestNewRound *types.MsgReque
 func (k Keeper) AddAccount(ctx sdk.Context, acc *types.MsgAccount) (int64, []byte) {
 	accStore := ctx.KVStore(k.accountStoreKey)
 
-	a := k.cdc.MustMarshalBinaryBare(acc)
+	a := k.cdc.MustMarshal(acc)
 
 	accStore.Set(types.GetAccountKey(acc.GetSubmitter().String()), a)
 
@@ -477,12 +477,12 @@ func (k Keeper) EditAccount(ctx sdk.Context, acc *types.MsgEditAccount) (int64, 
 	accountBytes := accStore.Get(types.GetAccountKey(accSubmitter))
 
 	var account types.MsgAccount
-	k.cdc.MustUnmarshalBinaryBare(accountBytes, &account)
+	k.cdc.Unmarshal(accountBytes, &account)
 
 	// overwrite the piggy address
 	account.PiggyAddress = acc.PiggyAddress
 
-	a := k.cdc.MustMarshalBinaryBare(&account)
+	a := k.cdc.MustMarshal(&account)
 	accStore.Set(types.GetAccountKey(acc.GetSubmitter().String()), a)
 
 	return ctx.BlockHeight(), ctx.TxBytes(), nil
@@ -494,7 +494,7 @@ func (k Keeper) GetAccount(ctx sdk.Context, accReq *types.GetAccountRequest) *ty
 	accountBytes := accStore.Get(types.GetAccountKey(acc))
 
 	var account types.MsgAccount
-	k.cdc.MustUnmarshalBinaryBare(accountBytes, &account)
+	k.cdc.Unmarshal(accountBytes, &account)
 
 	return &types.GetAccountResponse{
 		Account: &account,

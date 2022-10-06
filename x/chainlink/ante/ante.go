@@ -5,14 +5,12 @@ package ante
 
 import (
 	"bytes"
+
 	chainlinkkeeper "github.com/ChainSafe/chainlink-cosmos/x/chainlink/keeper"
 	"github.com/ChainSafe/chainlink-cosmos/x/chainlink/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	authante "github.com/cosmos/cosmos-sdk/x/auth/ante"
-	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
-	"github.com/cosmos/cosmos-sdk/x/auth/signing"
-	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -25,39 +23,40 @@ const (
 	ErrSubmitterDoesNotMatch    = "submitter address does not match"
 )
 
-func NewAnteHandler(
-	ak authkeeper.AccountKeeper, bankKeeper bankkeeper.Keeper, chainLinkKeeper chainlinkkeeper.Keeper,
-	sigGasConsumer authante.SignatureVerificationGasConsumer,
-	signModeHandler signing.SignModeHandler, externalTxDataValidationFunc func(sdk.Msg) bool,
-) sdk.AnteHandler {
-	return func(
-		ctx sdk.Context, tx sdk.Tx, sim bool,
-	) (newCtx sdk.Context, err error) {
-		anteHandler := sdk.ChainAnteDecorators(
-			authante.NewSetUpContextDecorator(), // outermost AnteDecorator. SetUpContext must be called first
-			authante.NewRejectExtensionOptionsDecorator(),
-			authante.NewMempoolFeeDecorator(),
-			authante.NewValidateBasicDecorator(),
-			authante.TxTimeoutHeightDecorator{},
-			authante.NewValidateMemoDecorator(ak),
-			authante.NewConsumeGasForTxSizeDecorator(ak),
-			authante.NewRejectFeeGranterDecorator(),
-			authante.NewSetPubKeyDecorator(ak), // SetPubKeyDecorator must be called before all signature verification decorators
-			authante.NewValidateSigCountDecorator(ak),
-			authante.NewDeductFeeDecorator(ak, bankKeeper),
-			authante.NewSigGasConsumeDecorator(ak, sigGasConsumer),
-			authante.NewSigVerificationDecorator(ak, signModeHandler),
-			authante.NewIncrementSequenceDecorator(ak),
-			// all customized anteHandler below
-			NewModuleOwnerDecorator(chainLinkKeeper),
-			NewFeedDecorator(chainLinkKeeper),
-			NewFeedDataDecorator(chainLinkKeeper),
-			NewValidationDecorator(externalTxDataValidationFunc),
-			NewAccountDecorator(chainLinkKeeper),
-		)
-
-		return anteHandler(ctx, tx, sim)
+func NewAnteHandler(options authante.HandlerOptions, chainLinkKeeper chainlinkkeeper.Keeper) (sdk.AnteHandler, error) {
+	sigGasConsumer := options.SigGasConsumer
+	if sigGasConsumer == nil {
+		sigGasConsumer = authante.DefaultSigVerificationGasConsumer
 	}
+
+	if options.SignModeHandler == nil {
+		return nil, sdkerrors.Wrap(sdkerrors.ErrLogic, "sign mode handler is required for ante builder")
+	}
+
+	anteDecorators := []sdk.AnteDecorator{
+		authante.NewSetUpContextDecorator(), // outermost AnteDecorator. SetUpContext must be called first
+		authante.NewRejectExtensionOptionsDecorator(),
+		authante.NewMempoolFeeDecorator(),
+		authante.NewValidateBasicDecorator(),
+		authante.TxTimeoutHeightDecorator{},
+		authante.NewValidateMemoDecorator(options.AccountKeeper),
+		authante.NewConsumeGasForTxSizeDecorator(options.AccountKeeper),
+		authante.NewRejectExtensionOptionsDecorator(),
+		authante.NewSetPubKeyDecorator(options.AccountKeeper), // SetPubKeyDecorator must be called before all signature verification decorators
+		authante.NewValidateSigCountDecorator(options.AccountKeeper),
+		authante.NewDeductFeeDecorator(options.AccountKeeper, options.BankKeeper, options.FeegrantKeeper),
+		authante.NewSigGasConsumeDecorator(options.AccountKeeper, sigGasConsumer),
+		authante.NewSigVerificationDecorator(options.AccountKeeper, options.SignModeHandler),
+		authante.NewIncrementSequenceDecorator(options.AccountKeeper),
+		// all customized anteHandler below
+		NewModuleOwnerDecorator(chainLinkKeeper),
+		NewFeedDecorator(chainLinkKeeper),
+		NewFeedDataDecorator(chainLinkKeeper),
+		NewValidationDecorator(nil),
+		NewAccountDecorator(chainLinkKeeper),
+	}
+
+	return sdk.ChainAnteDecorators(anteDecorators...), nil
 }
 
 type ModuleOwnerDecorator struct {

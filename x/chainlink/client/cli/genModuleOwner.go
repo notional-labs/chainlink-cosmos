@@ -8,10 +8,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+
 	chainlinktypes "github.com/ChainSafe/chainlink-cosmos/x/chainlink/types"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/server"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -31,8 +31,6 @@ func CmdGenesisModuleOwner() *cobra.Command {
 			pubKey := args[1]
 
 			clientCtx := client.GetClientContextFromCmd(cmd)
-			depCdc := clientCtx.JSONMarshaler
-			cdc := depCdc.(codec.Marshaler)
 			serverCtx := server.GetServerContextFromCmd(cmd)
 			conf := serverCtx.Config
 			conf.SetRoot(clientCtx.HomeDir)
@@ -75,7 +73,7 @@ func CmdGenesisModuleOwner() *cobra.Command {
 				return fmt.Errorf("failed to unmarshal genesis state: %w", err)
 			}
 
-			chainLinkGenState := chainlinktypes.GetGenesisStateFromAppState(cdc, appState)
+			chainLinkGenState := chainlinktypes.GetGenesisStateFromAppState(clientCtx.Codec, appState)
 
 			// check if the new address is already in the genesis
 			accs := (chainlinktypes.MsgModuleOwners)(chainLinkGenState.GetModuleOwners())
@@ -86,7 +84,7 @@ func CmdGenesisModuleOwner() *cobra.Command {
 
 			chainLinkGenState.ModuleOwners = accs
 
-			chainlinkGenStateBz, err := cdc.MarshalJSON(chainLinkGenState)
+			chainlinkGenStateBz, err := clientCtx.Codec.MarshalJSON(chainLinkGenState)
 			if err != nil {
 				return fmt.Errorf("failed to marshal auth genesis state: %w", err)
 			}
