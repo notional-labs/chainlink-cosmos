@@ -4,6 +4,7 @@ go 1.16
 
 require (
 	github.com/cosmos/cosmos-sdk v0.45.7
+	github.com/cosmos/gogoproto v1.4.2
 	github.com/ethereum/go-ethereum v1.10.6
 	github.com/gogo/protobuf v1.3.3
 	github.com/golang/protobuf v1.5.2
@@ -17,7 +18,7 @@ require (
 	github.com/tendermint/tendermint v0.34.20
 	github.com/tendermint/tm-db v0.6.6
 	google.golang.org/genproto v0.0.0-20220519153652-3a47de7e79bd
-	google.golang.org/grpc v1.48.0
+	google.golang.org/grpc v1.49.0
 )
 
 replace google.golang.org/grpc => google.golang.org/grpc v1.33.2
